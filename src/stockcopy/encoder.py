@@ -115,13 +115,26 @@ def encode_auxillary_planes(board: chess.Board):
     return planes
 
 
-def encode_board(board: chess.Board, history: deque) -> torch.Tensor:
+def encode_board(board: chess.Board) -> torch.Tensor:
 
     # main board (0-11)
     main_planes = encode_piece_plane(board, board.turn)
 
     # historical boards(12-95)
-    historical_planes = [encode_piece_plane(position, board.turn) for position in reversed(history)]
+    historical_planes = []
+
+    history_board = board.copy(stack = True)
+
+    for _ in range(7):
+
+        # stop if no more
+        if not history_board.move_stack:
+            break
+
+        # go back one move
+        history_board.pop()
+
+        historical_planes.append(encode_piece_plane(history_board, board.turn))
 
     # ensure historical planes has 8 values
     while len(historical_planes) < 7:
@@ -140,3 +153,99 @@ def encode_board(board: chess.Board, history: deque) -> torch.Tensor:
     )
 
     return planes.unsqueeze(0)
+
+
+
+
+# straight and diagonal moves (0-55)
+# knight moves (56-63)
+# underpromotion (64-72)
+
+
+def encode_move(move: chess.Move, perspective: chess.Color) -> tuple[int, int, int]:
+
+    # get start and end pos
+
+    start_row = chess.square_rank(move.from_square)
+    start_col = chess.square_file(move.from_square)
+
+    end_row = chess.square_rank(move.to_square)
+    end_col = chess.square_file(move.to_square)
+
+    # check for black
+    if perspective == chess.BLACK:
+        start_row = 7 - start_row
+        end_row = 7 - end_row
+
+    # find distance
+    dr = end_row - start_row
+    dc = end_col - start_col
+
+    # check for under promotion (64 - 72)
+    if move.promotion in (
+        chess.KNIGHT,
+        chess.BISHOP,
+        chess.ROOK
+    ):
+        # underpromotions (64 - 72)
+
+        promotions = (
+            chess.KNIGHT,
+            chess.BISHOP,
+            chess.ROOK
+        )
+
+        promotion_index = promotions.index(move.promotion)
+
+        plane = 67 + (dc * 3) + promotion_index
+
+    # straight and diagonal moves (0-55)
+    elif dr == 0 or dc == 0 or abs(dr) == abs(dc):
+
+        directions = (
+            (1, 0),
+            (1, 1),
+            (0, 1),
+            (-1, 1),
+            (-1, 0),
+            (-1, -1),
+            (0, -1),
+            (1, -1)
+        )
+
+        direction = (
+            0 if dr == 0 else (1 if dr > 0 else -1),
+            0 if dc == 0 else (1 if dc > 0 else -1)  
+        )
+
+        direction_index = directions.index(direction)
+
+        distance = max(abs(dr), abs(dc))
+
+        plane = (direction_index * 7) + distance - 1
+
+    # knight moves (56 - 63)
+    else:
+
+        knight_moves = (
+            (2, 1),
+            (1, 2),
+            (-1, 2),
+            (-2, 1),
+            (-2, -1),
+            (-1, -2),
+            (1, -2),
+            (2, -1)
+        )
+
+        knight_index = knight_moves.index((dr, dc))
+
+        plane = 56 + knight_index
+
+    return plane, start_row, start_col
+
+
+def decode_move():
+    pass
+
+
