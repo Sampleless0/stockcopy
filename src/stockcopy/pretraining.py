@@ -65,7 +65,9 @@ def game_to_sample(game):
 
         board.push(played_move)
 
-def iterate_pgn_sample(pgn_path):
+def iterate_pgn_sample(pgn_path, split, validation_every = 10):
+
+    game_index = 0
 
     with pgn_path.open('r', encoding = 'utf-8') as pgn_file:
 
@@ -75,5 +77,16 @@ def iterate_pgn_sample(pgn_path):
            
             if game is None:
                 break
+
+            # split games into train and validation
+            is_validation = game_index % validation_every == 0
+            game_index += 1
+
+            if split == 'train' and is_validation:
+                continue
+
+            if split == 'val' and not is_validation:
+                continue
+
     
             yield from game_to_sample(game)

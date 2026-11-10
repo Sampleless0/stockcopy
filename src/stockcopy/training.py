@@ -54,7 +54,7 @@ def combine_samples(samples):
 
 
 
-def iterate_samples(samples):
+def iterate_samples(samples, batch_size):
 
     batch = []
 
@@ -62,9 +62,13 @@ def iterate_samples(samples):
 
         batch.append(sample)
 
-        if len(batch) == 8:
+        if len(batch) == batch_size:
             yield combine_samples(batch)
             batch = []
+
+    # excess samples
+    if batch:
+        yield combine_samples(batch)
 
 
 def train_one_eposh(model, optimiser, batches):
@@ -82,7 +86,7 @@ def train_one_eposh(model, optimiser, batches):
         input_batch = batch['boards'].to('cuda')
 
         legal_indices = batch['legal_indices'].to('cuda')
-        legal_mask = batch['legal_mask'].to('cuda')
+        legal_mask = batch['legal_masks'].to('cuda')
 
         policy_targets = batch['policy_targets'].to('cuda')
         value_targets = batch['value_targets'].to('cuda')
@@ -143,9 +147,82 @@ def train_one_eposh(model, optimiser, batches):
             total_loss += loss.item() * current_batch_size
             total_samples += current_batch_size
 
-        return {
-            'policy_loss' : total_policy_loss / total_samples,
-            'value_loss' : total_value_loss / total_samples,
-            'total_loss' : total_loss / total_samples,
-            'total_samples' : total_samples
-        }
+    return {
+        'policy_loss' : total_policy_loss / total_samples,
+        'value_loss' : total_value_loss / total_samples,
+        'total_loss' : total_loss / total_samples,
+        'total_samples' : total_samples
+    }
+
+def evaluate_one_eposh(model, batches):
+
+    model.eval()
+
+    total_policy_loss = 0
+    total_value_loss = 0
+    total_loss = 0
+    total_samples = 0
+
+    with torch.inference_mode():
+        
+        for batch in batches:
+
+            # transfer to gpu
+            input_batch = batch['boards'].to('cuda')
+
+            legal_indices = batch['legal_indices'].to('cuda')
+            legal_mask = batch['legal_masks'].to('cuda')
+
+            policy_targets = batch['policy_targets'].to('cuda')
+            value_targets = batch['value_targets'].to('cuda')
+
+            current_batch_size = input_batch.shape[0]
+
+            optimiser.zero_grad(set_to_none = True)
+
+            # forward
+            with torch.autocast(device_type = 'cuda', dtype = torch.bfloat16):
+
+                policy_batch, value_batch = model(input_batch)
+
+                # flatten output
+                policy_flat = policy_batch.flatten(start_dim = 1)
+
+                legal_logits = policy_flat.gather(dim = 1, index = legal_indices).float()
+
+                # remove invalid moves
+                legal_logits = legal_logits.masked_fill(~legal_mask, float('-inf'))
+
+                # calc policy loss
+                log_probs = F.log_softmax(legal_logits, dim = 1)
+
+                safe_log_probs = log_probs.masked_fill(~legal_mask, 0)
+
+                policy_losses = -(policy_targets * safe_log_probs).sum(dim = 1)
+
+                policy_loss = policy_losses.mean()
+
+                # convert wdl values into labels
+                value_classes = (1 - value_targets).round().long()
+
+                # calc value loss
+                value_loss = F.cross_entropy(
+                    value_batch.float(),
+                    value_classes
+                )
+
+                # combined loss
+                loss = policy_loss + (0.5 * value_loss)
+
+                # update stats
+                total_policy_loss += policy_loss.item() * current_batch_size
+                total_value_loss += value_loss.item() * current_batch_size
+                total_loss += loss.item() * current_batch_size
+                total_samples += current_batch_size
+
+    return {
+        'policy_loss' : total_policy_loss / total_samples,
+        'value_loss' : total_value_loss / total_samples,
+        'total_loss' : total_loss / total_samples,
+        'total_samples' : total_samples
+    }
