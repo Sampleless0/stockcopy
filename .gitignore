@@ -6,9 +6,15 @@ dist/
 wheels/
 *.egg-info
 
+data/
+.python-version
+pyproject.toml
+training_data.npz
+uv.lock
 *pgn
 *model
 *syzygy
+*buffers
 
 # Virtual environments
 .venv
