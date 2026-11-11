@@ -80,7 +80,8 @@ def train_one_eposh(model, optimiser, batches):
     total_loss = 0
     total_samples = 0
 
-    for batch in batches:
+    for i, batch in enumerate(batches):
+        print(f'\rtraining batch {i+1} ', end = '', flush = True)
 
         # transfer to gpu
         input_batch = batch['boards'].to('cuda')
@@ -164,8 +165,9 @@ def evaluate_one_eposh(model, batches):
     total_samples = 0
 
     with torch.inference_mode():
-        
-        for batch in batches:
+
+        for i, batch in enumerate(batches):
+            print(f'\revaluating batch {i+1} ', end = '', flush = True)
 
             # transfer to gpu
             input_batch = batch['boards'].to('cuda')
@@ -178,7 +180,6 @@ def evaluate_one_eposh(model, batches):
 
             current_batch_size = input_batch.shape[0]
 
-            optimiser.zero_grad(set_to_none = True)
 
             # forward
             with torch.autocast(device_type = 'cuda', dtype = torch.bfloat16):

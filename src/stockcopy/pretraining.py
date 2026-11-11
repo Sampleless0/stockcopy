@@ -47,6 +47,12 @@ def game_to_sample(game):
             dtype = torch.float32
         )
 
+        # find played move
+        played_index = legal_moves.index(played_move)
+
+        # set played move to 1
+        policy_target[played_index] = 1
+
         # calculate value from current player pov
         if board.turn == chess.WHITE:
             value_target = white_result

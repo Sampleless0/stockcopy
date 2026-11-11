@@ -28,12 +28,18 @@ def main():
     )
 
     pgn_paths = [
+        Path('data/Aronian.pgn'),
         Path('data/Carlsen.pgn'),
         Path('data/Caruana.pgn'),
-        Path('data/Nakamura.pgn')
+        Path('data/Nakamura.pgn'),
+        Path('data/So.pgn'),
+        Path('data/VachierLagrave.pgn'),
     ]
 
     for eposh in range(eposhs):
+        print(f'\neposh --- {eposh}')
+
+        print(f'\nobtaining training samples...')
 
         # training samples
         train_samples = chain.from_iterable(
@@ -41,9 +47,15 @@ def main():
             for pgn_path in pgn_paths
         )
 
+        print(f'\nobtainined training samples')
+
         train_batches = training.iterate_samples(train_samples, batch_size)
 
+        print(f'\nbatched training samples\n')
+
         train_metrics = training.train_one_eposh(model, optimiser, train_batches)
+
+        print(f'\ntrained eposh, obtaining val samples...')
 
         # validation samples
         val_samples = chain.from_iterable(
@@ -51,7 +63,11 @@ def main():
             for pgn_path in pgn_paths
         )
 
+        print(f'\nobtainined validation samples')
+
         val_batches = training.iterate_samples(val_samples, batch_size)
+
+        print(f'\nbatched validation samples\n')
 
         val_metrics = training.evaluate_one_eposh(model, val_batches)
 
@@ -61,7 +77,7 @@ def main():
 
 
         # print output
-        print(f'\neposh: {eposh}')
+        print(f'\n\neposh: {eposh}')
 
         print('\ntraining:')
         print(f'samples: {train_metrics['total_samples']}')
