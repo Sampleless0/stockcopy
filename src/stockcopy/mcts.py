@@ -233,7 +233,7 @@ def backpropagate(path: list[Node], leaf_value: float):
 
 class MCTS:
 
-    def __init__(self, model, c_puct = 1.5, batch_size = 8, virtual_loss = 1):
+    def __init__(self, model, c_puct = 1.5, batch_size = 16, virtual_loss = 1):
         self.model = model
         self.c_puct = c_puct
         self.batch_size = batch_size

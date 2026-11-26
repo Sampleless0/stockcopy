@@ -3,6 +3,15 @@ import torch
 import math
 import encoder
 
+def score_value(score):
+
+    if score.is_mate():
+        moves = score.mate()
+        sign = 1 if moves > 0 else -1
+        return sign * (10000 - (100 * abs(moves)))
+
+    return score.score()
+
 def prepare_training_samples(saved_training_data, stockfish):
     samples = []
 
@@ -30,7 +39,7 @@ def prepare_training_samples(saved_training_data, stockfish):
 
         # policy
         scores = { 
-            info['pv'][0] : info['score'].pov(board.turn).score(mate_score = 1000)
+            info['pv'][0] : score_value(info['score'].pov(board.turn))
             for info in infos
         }
 

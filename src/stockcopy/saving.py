@@ -3,13 +3,12 @@ import torch
 import chess
 import chess.pgn
 
-def save_model(model_state_dict, optimiser_state_dict, scheduler_state_dict, game_count, model_path):
+def save_model(model_state_dict, optimiser_state_dict, game_count, model_path):
     temp_path = model_path.with_suffix('.tmp')
     
     torch.save({
         'model_state_dict' : model_state_dict,
         'optimiser_state_dict' : optimiser_state_dict,
-        'schedular_state_dict' : scheduler_state_dict,
         'game_count' : game_count
     }, temp_path)
 
@@ -70,14 +69,13 @@ def save_pgn(board, game_count, bot_play_white, pgn_path):
 
 
 
-def save_checkpoint(model_state_dict, optimiser_state_dict, scheduler_state_dict, game_count):
+def save_checkpoint(model_state_dict, optimiser_state_dict, game_count):
 
     save_checkpoint_file = Path(f'C:/Users/sampl/Documents/code/personal/stockcopy/src/stockcopy/model/checkpoint_{game_count}.pt')
 
     torch.save({
         'model_state_dict' : model_state_dict,
         'optimiser_state_dict' : optimiser_state_dict,
-        'schedular_state_dict' : scheduler_state_dict,
         'game_count' : game_count
     }, save_checkpoint_file)
 

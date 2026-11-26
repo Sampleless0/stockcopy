@@ -12,6 +12,8 @@ import analyse
 import training
 import saving
 
+print('\nstarting self training')
+
 # initialise stuff
 model_path = Path(r'C:\Users\sampl\Documents\code\personal\stockcopy\src\stockcopy\model\test_model.pt')
 stockfish_path = Path(r'C:\Users\sampl\Documents\code\personal\stockcopy\src\stockcopy\model\stockfish-windows-x86-64-universal.exe')
@@ -30,9 +32,9 @@ optimiser = torch.optim.AdamW(
     weight_decay = 0.0001
 )
 
-scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+scheduler = torch.optim.lr_scheduler.LambdaLR(
     optimiser,
-    T_max = 100000
+    lambda step: 1
 )
 
 searcher = mcts.MCTS(model)
@@ -45,7 +47,7 @@ play_engine = chess.engine.SimpleEngine.popen_uci(stockfish_path)
 play_engine.configure({'UCI_LimitStrength' : True, 'UCI_Elo' : 1320})
 
 engine = chess.engine.SimpleEngine.popen_uci(stockfish_path)
-engine.configure({'UCI_ShowWDL' : True})
+engine.configure({'UCI_ShowWDL' : True, 'Threads' : 4, 'Hash' : 256})
 
 
 game_count = 0
@@ -69,6 +71,8 @@ if model_path.exists():
 
     game_count = checkpoint.get('game_count', 0)
 
+    print('\nloaded model')
+
 
 
 # load replay buffer
@@ -81,7 +85,7 @@ if replay_path.exists():
 
     replay_buffer.load_state_dict(replay_checkpoint)
 
-    print(f'loaded replay buffer with {len(replay_buffer)} positions\n')
+    print(f'\nloaded replay buffer with {len(replay_buffer)} positions\n')
 
 game_count += 1
 
@@ -111,16 +115,12 @@ try:
             # grab temp
             if game_count % 100 == 0:
                 temperature = 0
-                use_root_noise = False
             elif move_number < 20:
                 temperature = 1
-                use_root_noise = True
             elif move_number < 60:
                 temperature = 0.5
-                use_root_noise = True
             else:
                 temperature = 0.1
-                use_root_noise = True
 
             print(f'game: {game_count} | {move_number} | {play_engine_percent:.2f}')
 
@@ -136,16 +136,10 @@ try:
                     board = board,
                     num_simulations = 200,
                     root = root,
-                    use_root_noise = use_root_noise
+                    use_root_noise = False if temperature == 0 else True
                 )
 
                 
-                # obtain policy distribution
-                search_policy = searcher.get_policy(
-                    root = root,
-                    temperature = 1
-                )
-
                 move = searcher.select_move(
                     root = root,
                     temperature = temperature
@@ -158,8 +152,7 @@ try:
                 root = next_root
 
                 saved_training_data.append({
-                    'board' : saved_board,
-                    'policy' : search_policy
+                    'board' : saved_board
                 })
 
             else:
@@ -242,11 +235,11 @@ try:
 
         # save model
         if game_count % 20 == 0:
-            saving.save_model(model.state_dict(), optimiser.state_dict(), scheduler.state_dict(), game_count, model_path)
+            saving.save_model(model.state_dict(), optimiser.state_dict(), game_count, model_path)
 
             
         # save replay buffer
-        if game_count % 20 == 0:
+        if game_count % 200 == 0:
             saving.save_replay(replay_buffer, replay_path)
 
 
@@ -261,7 +254,7 @@ try:
 
         # save model
         if game_count % 1000 == 0:
-            saving.save_checkpoint(model.state_dict(), optimiser.state_dict(), scheduler.state_dict(), game_count)
+            saving.save_checkpoint(model.state_dict(), optimiser.state_dict(), game_count)
 
 
 
