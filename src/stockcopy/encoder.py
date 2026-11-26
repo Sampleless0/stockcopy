@@ -245,7 +245,9 @@ def encode_move(move: chess.Move, perspective: chess.Color) -> tuple[int, int, i
     return plane, start_row, start_col
 
 
-def decode_move():
-    pass
 
+def get_policy_index(move, turn):
 
+    plane, row, col = encode_move(move, turn)
+
+    return plane * 64 + row * 8 + col

@@ -4,8 +4,8 @@ import torch
 import torch.nn.functional as F
 import math
 
-from . import encoder
-from . import inference
+import encoder
+import inference
 
 # add node class
 class Node:
