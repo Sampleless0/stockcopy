@@ -71,13 +71,6 @@ while not board.is_game_over(claim_draw = True):
             use_root_noise = False
         )
 
-        
-        # obtain policy distribution
-        search_policy = searcher.get_policy(
-            root = root,
-            temperature = 0
-        )
-
         move = searcher.select_move(
             root = root,
             temperature = 0
