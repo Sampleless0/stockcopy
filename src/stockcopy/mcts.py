@@ -240,7 +240,7 @@ class MCTS:
         self.virtual_loss = virtual_loss
 
     # search for best move
-    def search(self, board: chess.Board, num_simulations = 800, root: Node = None, use_root_noise = False):
+    def search(self, board: chess.Board, num_simulations: int | None = 800, root: Node = None, use_root_noise = False, stop_event = None):
         self.model.eval()
 
         # create a root
@@ -281,9 +281,24 @@ class MCTS:
             self.add_root_noise(root, alpha = 0.3, epsilon = 0.25)
 
         # run simulations
-        for batch_start in range(0, num_simulations, self.batch_size):
+        simulations_done = 0
 
-            current_batch_size = min(self.batch_size, num_simulations - batch_start)
+        while num_simulations is None or simulations_done < num_simulations:
+
+            # check if pondering should stop
+            if stop_event is not None and stop_event.is_set():
+                break
+
+
+            if num_simulations is None:
+
+                current_batch_size = self.batch_size
+
+                print(simulations_done)
+
+            else:
+
+                current_batch_size = min(self.batch_size, num_simulations - simulations_done)
 
             paths = []
 
@@ -387,6 +402,9 @@ class MCTS:
                 revert_virtual_loss(path, self.virtual_loss)
 
                 backpropagate(path, leaf_value)
+
+
+            simulations_done += current_batch_size
 
         return root
         

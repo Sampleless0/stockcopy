@@ -19,3 +19,4 @@ uv.lock
 
 # Virtual environments
 .venv
+.env

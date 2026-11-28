@@ -12,6 +12,11 @@ import analyse
 import training
 import saving
 
+
+# cd C:\Users\sampl\Documents\code\personal\stockcopy
+# .venv\Scripts\activate
+# python C:\Users\sampl\Documents\code\personal\stockcopy\src\stockcopy\self_play.py
+
 print('\nstarting self training')
 
 # initialise stuff
@@ -40,7 +45,7 @@ scheduler = torch.optim.lr_scheduler.LambdaLR(
 searcher = mcts.MCTS(model)
 
 replay_buffer = buffer.ReplayBuffer(
-    capacity = 1000000
+    capacity = 500000
 )
 
 play_engine = chess.engine.SimpleEngine.popen_uci(stockfish_path)
@@ -239,7 +244,7 @@ try:
 
             
         # save replay buffer
-        if game_count % 200 == 0:
+        if game_count % 500 == 0:
             saving.save_replay(replay_buffer, replay_path)
 
 
